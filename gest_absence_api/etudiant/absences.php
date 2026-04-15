@@ -2,7 +2,7 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 
-include("../config/db_connect.php");
+include("../config/database.php");
 
 $response = array();
 

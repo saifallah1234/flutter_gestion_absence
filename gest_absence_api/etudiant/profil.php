@@ -2,7 +2,7 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 
-include("../config/db_connect.php");
+include("../config/database.php");
 
 $response = array();
 
@@ -18,6 +18,12 @@ if (isset($_GET["id"])) {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$id]);
     $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($profile) {
+    $profile['id'] = (int) $profile['id'];
+
+    $response["success"] = 1;
+    $response["data"] = $profile;
+}
     
     if ($profile) {
         $response["success"] = 1;

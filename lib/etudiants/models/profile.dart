@@ -13,13 +13,13 @@ class EtudiantProfile {
     required this.classe,
   });
 
-  factory EtudiantProfile.fromJson(Map<String, dynamic> json) {
-    return EtudiantProfile(
-      id: json['id'] ?? 0,
-      nom: json['nom'] ?? '',
-      prenom: json['prenom'] ?? '',
-      email: json['email'] ?? '',
-      classe: json['classe'] ?? '',
-    );
-  }
+factory EtudiantProfile.fromJson(Map<String, dynamic> json) {
+  return EtudiantProfile(
+    id: int.tryParse(json['id'].toString()) ?? 0,
+    nom: json['nom'] ?? '',
+    prenom: json['prenom'] ?? '',
+    email: json['email'] ?? '',
+    classe: json['classe'] ?? '',
+  );
+}
 }
