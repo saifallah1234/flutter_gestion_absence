@@ -1,3 +1,4 @@
+// lib/services/api_service.dart - Version corrigée avec baseUrl
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
@@ -129,4 +130,304 @@ class ApiService {
       return false;
     }
   }
+
+  // ==========================================
+  // ETUDIANT ENDPOINTS
+  // ==========================================
+  static Future<Map<String, dynamic>> getEtudiantDashboard(int etudiantId) async {
+    final url = Uri.parse('${ApiEndpoints.etudiantAbsences}?id=$etudiantId');
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getEtudiantProfil(int etudiantId) async {
+    final url = Uri.parse('${ApiEndpoints.etudiantProfil}?id=$etudiantId');
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // ADMIN ENDPOINTS - ETUDIANTS
+  // ==========================================
+  static Future<Map<String, dynamic>> getAdminEtudiants() async {
+    final url = Uri.parse(ApiEndpoints.adminEtudiants);
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> ajouterEtudiant(Map<String, dynamic> data) async {
+    final url = Uri.parse(ApiEndpoints.adminEtudiants);
+    try {
+      final response = await http.post(
+        url,
+        headers: jsonHeaders,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> modifierEtudiant(int id, Map<String, dynamic> data) async {
+    final url = Uri.parse('${ApiEndpoints.adminEtudiants}?id=$id');
+    try {
+      final response = await http.put(
+        url,
+        headers: jsonHeaders,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> supprimerEtudiant(int id) async {
+    final url = Uri.parse('${ApiEndpoints.adminEtudiants}?id=$id');
+    try {
+      final response = await http.delete(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // ADMIN ENDPOINTS - ENSEIGNANTS
+  // ==========================================
+  static Future<Map<String, dynamic>> getAdminEnseignants() async {
+    final url = Uri.parse(ApiEndpoints.adminEnseignants);
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> ajouterEnseignant(Map<String, dynamic> data) async {
+    final url = Uri.parse(ApiEndpoints.adminEnseignants);
+    try {
+      final response = await http.post(
+        url,
+        headers: jsonHeaders,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> modifierEnseignant(int id, Map<String, dynamic> data) async {
+    final url = Uri.parse('${ApiEndpoints.adminEnseignants}?id=$id');
+    try {
+      final response = await http.put(
+        url,
+        headers: jsonHeaders,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> supprimerEnseignant(int id) async {
+    final url = Uri.parse('${ApiEndpoints.adminEnseignants}?id=$id');
+    try {
+      final response = await http.delete(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // ADMIN ENDPOINTS - CLASSES
+  // ==========================================
+  static Future<Map<String, dynamic>> getAdminClasses() async {
+    final url = Uri.parse(ApiEndpoints.adminClasses);
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> ajouterClasse(Map<String, dynamic> data) async {
+    final url = Uri.parse(ApiEndpoints.adminClasses);
+    try {
+      final response = await http.post(
+        url,
+        headers: jsonHeaders,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // ADMIN ENDPOINTS - SEANCES
+  // ==========================================
+  static Future<Map<String, dynamic>> getAdminSeances() async {
+    final url = Uri.parse(ApiEndpoints.adminSeances);
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getSeanceFormData() async {
+    final url = Uri.parse('${ApiEndpoints.adminSeances}?lists=true');
+    try {
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> ajouterSeance(Map<String, dynamic> data) async {
+    final url = Uri.parse(ApiEndpoints.adminSeances);
+    try {
+      final response = await http.post(
+        url,
+        headers: jsonHeaders,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode != 200) {
+        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+      }
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': 0, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // NOTIFICATIONS ENDPOINTS
+  // ==========================================
+  // Dans api_service.dart, corriger ces méthodes :
+
+static Future<Map<String, dynamic>> getNotifications(int userId, String userType) async {
+  // Correction : utiliser le bon chemin
+  final url = Uri.parse('$baseUrl/etudiant/notifications.php?user_id=$userId&user_type=$userType');
+  try {
+    final response = await http.get(url, headers: jsonHeaders);
+    if (response.statusCode != 200) {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+    }
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
+
+static Future<Map<String, dynamic>> markNotificationAsRead(int notificationId) async {
+  final url = Uri.parse('$baseUrl/etudiant/notifications.php');
+  try {
+    final response = await http.put(
+      url,
+      headers: jsonHeaders,
+      body: jsonEncode({'id': notificationId, 'is_read': 1}),
+    );
+    if (response.statusCode != 200) {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+    }
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
+
+static Future<Map<String, dynamic>> markAllNotificationsAsRead(int userId, String userType) async {
+  final url = Uri.parse('$baseUrl/etudiant/notifications.php?action=mark_all');
+  try {
+    final response = await http.put(
+      url,
+      headers: jsonHeaders,
+      body: jsonEncode({'user_id': userId, 'user_type': userType}),
+    );
+    if (response.statusCode != 200) {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+    }
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
+
+static Future<Map<String, dynamic>> getNotificationStats(int userId, String userType) async {
+  final url = Uri.parse('$baseUrl/etudiant/notifications.php?action=stats&user_id=$userId&user_type=$userType');
+  try {
+    final response = await http.get(url, headers: jsonHeaders);
+    if (response.statusCode != 200) {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+    }
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
 }

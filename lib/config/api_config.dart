@@ -7,10 +7,11 @@ class ApiEndpoints {
   static const String login = '$baseUrl/auth/login.php';
   
   // Admin
-  static const String etudiants = '$baseUrl/admin/etudiants.php';
-  static const String enseignants = '$baseUrl/admin/enseignants.php';
-  static const String classes = '$baseUrl/admin/classes.php';
-  static const String seances = '$baseUrl/admin/seances.php';
+  static const String adminEtudiants = '$baseUrl/admin/etudiants.php';
+  static const String adminEnseignants = '$baseUrl/admin/enseignants.php';
+  static const String adminClasses = '$baseUrl/admin/classes.php';
+  static const String adminSeances = '$baseUrl/admin/seances.php';
+  
   
   // Enseignant
   static const String enseignantSeances = '$baseUrl/enseignant/seances.php';

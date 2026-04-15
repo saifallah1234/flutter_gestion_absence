@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'models/utilisateur.dart';
+import 'models/etudiant.dart';
 import 'screens/enseignant/enseignant_home.dart';
-import 'etudiants/absences.dart';
+import 'screens/etudiant/etudiant_home.dart';
 import 'services/api_service.dart';
+import 'screens/admin/admin_home.dart';
 
 void main() {
   runApp(const MyApp());
@@ -77,22 +79,27 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       } else if (user.role == 'etudiant') {
-        final etudiantId = int.tryParse(userData['etudiant_id']?.toString() ?? '') ?? 0;
+        final etudiant = Etudiant(
+    id: int.tryParse(userData['etudiant_id']?.toString() ?? '0') ?? 0,
+    utilisateurId: user.id,
+    nom: user.nom,
+    prenom: user.prenom,
+    classeId: userData['classe_id'] ?? 0,
+  );
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (context) => EtudiantHomeScreen(etudiant: etudiant),
+    ),
+  );
+} else if (user.role == 'admin') {
         Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AbsencesPage(
-              etudiantId: etudiantId,
-              nom: user.nom,
-              prenom: user.prenom,
-            ),
-          ),
-        );
-      } else if (user.role == 'admin') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Espace administrateur non encore implémenté.')),
-        );
-      } else {
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AdminHomeScreen(),
+    ),
+  );
+} else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Rôle non pris en charge: vérifiez votre compte.')),
         );
