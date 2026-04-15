@@ -39,7 +39,7 @@ class _EnseignantHomeScreenState extends State<EnseignantHomeScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () {
               // Retour à la page de connexion
-              Navigator.pushReplacementNamed(context, '/'); 
+              Navigator.pushReplacementNamed(context, '/');
             },
           )
         ],

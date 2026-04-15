@@ -7,52 +7,72 @@ import '../models/absence.dart';
 import '../models/etudiant.dart';
 
 class ApiService {
+  static const Map<String, String> jsonHeaders = {
+    'Content-Type': 'application/json',
+  };
+
   // ==========================================
   // AUTHENTICATION
   // ==========================================
   static Future<Map<String, dynamic>> login(String email, String password) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/auth/login.php');
+    final url = Uri.parse(ApiEndpoints.login);
     try {
       final response = await http.post(
         url,
-        headers: ApiConfig.headers,
+        headers: jsonHeaders,
         body: jsonEncode({'email': email, 'password': password}),
       );
-      return jsonDecode(response.body);
+
+      if (response.statusCode != 200) {
+        return {
+          'success': 0,
+          'message': 'HTTP ${response.statusCode}: ${response.reasonPhrase ?? 'Erreur'}',
+        };
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+
+      return {
+        'success': 0,
+        'message': 'Réponse du serveur invalide',
+      };
     } catch (e) {
-      return {'status': 'Error', 'message': 'Erreur serveur: $e'};
+      return {
+        'success': 0,
+        'message': 'Erreur serveur: $e',
+      };
     }
   }
 
   // ==========================================
   // ETUDIANTS ENDPOINTS
   // ==========================================
- static Future<List<Etudiant>> getEtudiantsByClasse(int classeId) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/enseignant/absences.php?classe_id=$classeId');
+  static Future<List<Etudiant>> getEtudiantsByClasse(int classeId) async {
+    final url = Uri.parse('${ApiEndpoints.enseignantAbsences}?classe_id=$classeId');
     try {
-      final response = await http.get(url, headers: ApiConfig.headers);
-      
-      // -- AJOUTS POUR LE DEBUG --
+      final response = await http.get(url, headers: jsonHeaders);
       print('Statut HTTP: ${response.statusCode}');
       print('Réponse brute PHP: ${response.body}');
-      // --------------------------
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        
-        // On vérifie si la réponse est bien une liste (et pas un message d'erreur {"status": "Error"})
-        if (decoded is List) {
-          return decoded.map((json) => Etudiant.fromJson(json)).toList();
-        } else {
-          print('Erreur renvoyée par PHP : $decoded');
-          return [];
-        }
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return decoded.map((json) => Etudiant.fromJson(json)).toList();
+      }
+
+      if (decoded is Map<String, dynamic> && decoded.containsKey('message')) {
+        print('Erreur API: ${decoded['message']}');
       }
       return [];
     } catch (e) {
-      // On affiche la VRAIE erreur Flutter dans la console
-      print('Erreur fatale Flutter: $e'); 
-      throw Exception('Erreur: $e');
+      print('Erreur fatale Flutter: $e');
+      throw Exception('Impossible de charger les étudiants');
     }
   }
 
@@ -60,33 +80,52 @@ class ApiService {
   // ENSEIGNANT ENDPOINTS
   // ==========================================
   static Future<List<Seance>> getSeancesEnseignant(int utilisateurId) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/enseignant/seances.php?id=$utilisateurId');
+    final url = Uri.parse('${ApiEndpoints.enseignantSeances}?id=$utilisateurId');
     try {
-      final response = await http.get(url, headers: ApiConfig.headers);
-      if (response.statusCode == 200) {
-        List data = jsonDecode(response.body);
-        return data.map((json) => Seance.fromJson(json)).toList();
+      final response = await http.get(url, headers: jsonHeaders);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return decoded.map((json) => Seance.fromJson(json)).toList();
+      }
+
+      if (decoded is Map<String, dynamic> && decoded.containsKey('message')) {
+        print('Erreur API: ${decoded['message']}');
       }
       return [];
     } catch (e) {
+      print('Erreur fatale Flutter: $e');
       throw Exception('Impossible de charger les séances');
     }
   }
 
   static Future<bool> soumettreAppel(int seanceId, List<Absence> appel) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/enseignant/absences.php');
+    final url = Uri.parse(ApiEndpoints.enseignantAbsences);
     try {
       final response = await http.post(
         url,
-        headers: ApiConfig.headers,
+        headers: jsonHeaders,
         body: jsonEncode({
           'seance_id': seanceId,
           'appel': appel.map((a) => a.toJson()).toList(),
         }),
       );
+
+      if (response.statusCode != 200) {
+        return false;
+      }
+
       final data = jsonDecode(response.body);
-      return data['status'] == 'Success' || data['status'] == 'Attendance updated';
+      if (data is Map<String, dynamic>) {
+        return data['success'] == 1 || data['status'] == 'Success' || data['status'] == 'Attendance updated';
+      }
+
+      return false;
     } catch (e) {
+      print('Erreur soumettreAppel: $e');
       return false;
     }
   }
