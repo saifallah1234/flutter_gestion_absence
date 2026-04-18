@@ -6,6 +6,8 @@ import '../../models/etudiant.dart';
 import '../../models/notification.dart';
 import 'etudiant_absences.dart';
 import 'etudiant_profil.dart';
+import 'dart:async';
+
 
 class EtudiantHomeScreen extends StatefulWidget {
   final Etudiant etudiant;
@@ -26,12 +28,29 @@ class _EtudiantHomeScreenState extends State<EtudiantHomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   int _unreadCount = 0;
+  Timer? _notificationTimer;
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _startNotificationPolling();
   }
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startNotificationPolling() {
+    // Vérifier les nouvelles notifications toutes les 30 secondes
+    _notificationTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadNotifications();
+      }
+    });
+  }
+   
 
   Future<void> _loadDashboardData() async {
     setState(() {
@@ -75,18 +94,73 @@ class _EtudiantHomeScreenState extends State<EtudiantHomeScreen> {
       final notifications = (response['data'] as List)
           .map((item) => NotificationModel.fromJson(item))
           .toList();
+      
+      final oldUnreadCount = _unreadCount;
+      
       setState(() {
         _recentNotifications = notifications.take(5).toList();
         _unreadCount = response['stats']?['unread'] ?? 0;
       });
+      
+      // Afficher une SnackBar si nouvelles notifications
+      if (_unreadCount > oldUnreadCount && oldUnreadCount > 0) {
+        final newCount = _unreadCount - oldUnreadCount;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$newCount nouvelle${newCount > 1 ? 's' : ''} notification${newCount > 1 ? 's' : ''}'),
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Voir',
+              onPressed: _showNotificationsDialog,
+            ),
+          ),
+        );
+      }
     }
   }
 
-  int getTotalAbsences() => _statistics['absent'] ?? 0;
-  int getTotalPresent() => _statistics['present'] ?? 0;
-  int getTotalSeances() => _statistics['total_seances'] ?? 0;
-  double getAttendanceRate() => _statistics['overall_attendance_rate'] ?? 100.0;
-  double getAbsenceRate() => _statistics['overall_absence_rate'] ?? 0.0;
+  // ✅ Remplacer les getters existants par ceux-ci :
+int getTotalAbsences() {
+  final value = _statistics['absent'];
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+int getTotalPresent() {
+  final value = _statistics['present'];
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+int getTotalSeances() {
+  final value = _statistics['total_seances'];
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+double getAttendanceRate() {
+  final value = _statistics['overall_attendance_rate'];
+  if (value == null) return 100.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();  // ✅ Conversion int → double
+  if (value is String) return double.tryParse(value) ?? 100.0;
+  return 100.0;
+}
+
+double getAbsenceRate() {
+  final value = _statistics['overall_absence_rate'];
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();  // ✅ Conversion int → double
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
 
   void _goToAbsences() {
     Navigator.push(
@@ -155,17 +229,43 @@ class _EtudiantHomeScreenState extends State<EtudiantHomeScreen> {
                 ),
               ),
               Expanded(
-                child: notifications.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_none, size: 48, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text('Aucune notification'),
-                          ],
-                        ),
-                      )
+                    child: notifications.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.notifications_off_outlined,
+                                    size: 64,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Aucune notification',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Les notifications d\'absence apparaîtront ici',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
                     : ListView.builder(
                         controller: scrollController,
                         itemCount: notifications.length,
@@ -426,32 +526,35 @@ class _EtudiantHomeScreenState extends State<EtudiantHomeScreen> {
     );
   }
 
-  Widget _buildRateCard(String label, double value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10)),
-          Text('${value.toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              backgroundColor: Colors.white.withOpacity(0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 3,
-            ),
+Widget _buildRateCard(String label, double value, Color color) {
+  // ✅ S'assurer que value est un double valide
+  final safeValue = value.clamp(0.0, 100.0);
+  
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.15),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10)),
+        Text('${safeValue.toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: safeValue / 100.0,  // ✅ Utiliser 100.0 pour garantir un double
+            backgroundColor: Colors.white.withOpacity(0.3),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 3,
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildWarningCard() {
     return Container(
@@ -555,68 +658,94 @@ class _EtudiantHomeScreenState extends State<EtudiantHomeScreen> {
     );
   }
 
-  Widget _buildNotificationCard(NotificationModel notification) {
-    return GestureDetector(
-      onTap: () => _markAsRead(notification),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : const Color(0xFFF0F0FF),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: notification.iconColor.withOpacity(0.2)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: notification.iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(notification.icon, color: notification.iconColor, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    notification.title,
-                    style: TextStyle(
-                      fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    notification.message,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    notification.formattedDate,
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 10),
-                  ),
-                ],
-              ),
-            ),
-            if (!notification.isRead)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: notification.iconColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
+Widget _buildNotificationCard(NotificationModel notification) {
+  return GestureDetector(
+    onTap: () => _markAsRead(notification),
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: notification.isRead ? Colors.white : const Color(0xFFF0F0FF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: notification.type == 'justifie' 
+              ? Colors.orange.withOpacity(0.3) 
+              : notification.iconColor.withOpacity(0.2)
         ),
       ),
-    );
-  }
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: notification.iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(notification.icon, color: notification.iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  notification.title,
+                  style: TextStyle(
+                    fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  notification.message,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      notification.formattedDate,
+                      style: TextStyle(color: Colors.grey.shade400, fontSize: 10),
+                    ),
+                    if (notification.type == 'justifie') ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Justifiée',
+                          style: TextStyle(
+                            color: Colors.orange.shade700,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (!notification.isRead)
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: notification.iconColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildBottomNavBar() {
     return Container(

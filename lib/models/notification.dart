@@ -24,15 +24,35 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'],
-      userId: json['user_id'],
-      userType: json['user_type'],
-      title: json['title'],
-      message: json['message'],
-      type: json['type'],
-      isRead: json['is_read'] == 1,
-      createdAt: DateTime.parse(json['created_at']),
+      id: _parseInt(json['id']),
+      userId: _parseInt(json['user_id']),
+      userType: json['user_type']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'info',
+      isRead: json['is_read'] == 1 || json['is_read'] == '1' || json['is_read'] == true,
+      createdAt: _parseDateTime(json['created_at']),
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is DateTime) return value;
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -53,7 +73,7 @@ class NotificationModel {
     final diff = now.difference(createdAt);
     
     if (diff.inDays > 7) {
-      return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
+      return '${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}';
     } else if (diff.inDays > 0) {
       return 'il y a ${diff.inDays} jour${diff.inDays > 1 ? 's' : ''}';
     } else if (diff.inHours > 0) {
@@ -69,6 +89,8 @@ class NotificationModel {
     switch (type) {
       case 'absence':
         return Icons.warning_amber_rounded;
+      case 'justifie':
+        return Icons.check_circle_outline;
       case 'info':
         return Icons.info_outline;
       case 'success':
@@ -82,12 +104,14 @@ class NotificationModel {
     switch (type) {
       case 'absence':
         return Colors.red;
+      case 'justifie':
+        return Colors.orange;
       case 'info':
         return Colors.blue;
       case 'success':
         return Colors.green;
       default:
-        return Colors.orange;
+        return Colors.grey;
     }
   }
 }
@@ -104,10 +128,17 @@ class NotificationStats {
   });
 
   factory NotificationStats.fromJson(Map<String, dynamic> json) {
+    final byType = <String, int>{};
+    if (json['by_type'] != null) {
+      (json['by_type'] as Map).forEach((key, value) {
+        byType[key.toString()] = value is int ? value : int.tryParse(value.toString()) ?? 0;
+      });
+    }
+    
     return NotificationStats(
-      total: json['total'] ?? 0,
-      unread: json['unread'] ?? 0,
-      byType: Map<String, int>.from(json['by_type'] ?? {}),
+      total: json['total'] is int ? json['total'] : int.tryParse(json['total'].toString()) ?? 0,
+      unread: json['unread'] is int ? json['unread'] : int.tryParse(json['unread'].toString()) ?? 0,
+      byType: byType,
     );
   }
 }

@@ -51,6 +51,39 @@ class ApiService {
   // ==========================================
   // ETUDIANTS ENDPOINTS
   // ==========================================
+
+  // Statistiques détaillées de l'étudiant
+static Future<Map<String, dynamic>> getEtudiantStats(int etudiantId) async {
+  try {
+    final url = Uri.parse('$baseUrl/etudiant/stats.php?id=$etudiantId');
+    final response = await http.get(url, headers: jsonHeaders);
+    
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return {'success': 0, 'message': 'Erreur serveur'};
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
+  static Future<List<Absence>> getAbsencesBySeance(int seanceId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/enseignant/absences.php?seance_id=$seanceId'),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['status'] == 'Success' && data['data'] != null) {
+        return (data['data'] as List)
+            .map((item) => Absence.fromJson(item))
+            .toList();
+      }
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
   static Future<List<Etudiant>> getEtudiantsByClasse(int classeId) async {
     final url = Uri.parse('${ApiEndpoints.enseignantAbsences}?classe_id=$classeId');
     try {
@@ -273,18 +306,36 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> supprimerEnseignant(int id) async {
-    final url = Uri.parse('${ApiEndpoints.adminEnseignants}?id=$id');
-    try {
-      final response = await http.delete(url, headers: jsonHeaders);
-      if (response.statusCode != 200) {
-        return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+static Future<Map<String, dynamic>> supprimerEnseignant(int id) async {
+  final url = Uri.parse('${ApiEndpoints.adminEnseignants}?id=$id');
+  try {
+    print('DELETE URL: $url'); // Pour déboguer
+    
+    final response = await http.delete(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
+    
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    
+    if (response.statusCode == 200) {
+      try {
+        return jsonDecode(response.body);
+      } catch (e) {
+        return {'success': 0, 'message': 'Réponse invalide: ${response.body}'};
       }
-      return jsonDecode(response.body);
-    } catch (e) {
-      return {'success': 0, 'message': 'Erreur: $e'};
+    } else {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}: ${response.body}'};
     }
+  } catch (e) {
+    print('DELETE Error: $e');
+    return {'success': 0, 'message': 'Erreur: $e'};
   }
+}
 
   // ==========================================
   // ADMIN ENDPOINTS - CLASSES
@@ -364,6 +415,37 @@ class ApiService {
       return {'success': 0, 'message': 'Erreur: $e'};
     }
   }
+
+  // GET - Récupérer toutes les matières
+static Future<Map<String, dynamic>> getAdminMatieres() async {
+  final url = Uri.parse(ApiEndpoints.adminMatieres);
+  try {
+    final response = await http.get(url, headers: jsonHeaders);
+    if (response.statusCode != 200) {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+    }
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
+// POST - Ajouter une matière
+static Future<Map<String, dynamic>> ajouterMatiere(String nom) async {
+  final url = Uri.parse(ApiEndpoints.adminMatieres);
+  try {
+    final response = await http.post(
+      url,
+      headers: jsonHeaders,
+      body: jsonEncode({'nom': nom}),
+    );
+    if (response.statusCode != 200) {
+      return {'success': 0, 'message': 'HTTP ${response.statusCode}'};
+    }
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {'success': 0, 'message': 'Erreur: $e'};
+  }
+}
 
   // ==========================================
   // NOTIFICATIONS ENDPOINTS

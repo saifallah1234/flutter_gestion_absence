@@ -71,29 +71,52 @@ elseif ($method == "POST") {
 elseif ($method == "PUT") {
     $data = json_decode(file_get_contents("php://input"), true);
     
-    if (isset($data["id"])) {
+    // Récupérer l'ID soit de l'URL soit du body
+    $id = isset($_GET['id']) ? $_GET['id'] : (isset($data['id']) ? $data['id'] : null);
+    
+    if ($id) {
         // Get utilisateur_id from enseignant
         $stmt = $pdo->prepare("SELECT utilisateur_id FROM enseignants WHERE id = ?");
-        $stmt->execute([$data["id"]]);
+        $stmt->execute([$id]);
         $teacher = $stmt->fetch();
         
         if ($teacher) {
+            $pdo->beginTransaction();
+            
             // Update utilisateurs
-            $sql = "UPDATE utilisateurs SET nom = ?, prenom = ?, email = ? WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                $data["nom"] ?? null,
-                $data["prenom"] ?? null,
-                $data["email"] ?? null,
-                $teacher["utilisateur_id"]
-            ]);
+            if (isset($data["nom"]) || isset($data["prenom"]) || isset($data["email"])) {
+                $updateFields = [];
+                $params = [];
+                
+                if (isset($data["nom"])) {
+                    $updateFields[] = "nom = ?";
+                    $params[] = $data["nom"];
+                }
+                if (isset($data["prenom"])) {
+                    $updateFields[] = "prenom = ?";
+                    $params[] = $data["prenom"];
+                }
+                if (isset($data["email"])) {
+                    $updateFields[] = "email = ?";
+                    $params[] = $data["email"];
+                }
+                
+                if (!empty($updateFields)) {
+                    $params[] = $teacher["utilisateur_id"];
+                    $sql = "UPDATE utilisateurs SET " . implode(", ", $updateFields) . " WHERE id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute($params);
+                }
+            }
             
             // Update specialite if provided
             if (isset($data["specialite"])) {
                 $sql2 = "UPDATE enseignants SET specialite = ? WHERE id = ?";
                 $stmt2 = $pdo->prepare($sql2);
-                $stmt2->execute([$data["specialite"], $data["id"]]);
+                $stmt2->execute([$data["specialite"], $id]);
             }
+            
+            $pdo->commit();
             
             $response["success"] = 1;
             $response["message"] = "Teacher updated successfully";
@@ -113,30 +136,58 @@ elseif ($method == "DELETE") {
     $id = isset($_GET['id']) ? intval($_GET['id']) : null;
     
     if ($id) {
-        // Get utilisateur_id from enseignant
         $stmt = $pdo->prepare("SELECT utilisateur_id FROM enseignants WHERE id = ?");
         $stmt->execute([$id]);
         $teacher = $stmt->fetch();
         
         if ($teacher) {
-            // Delete from enseignants first
-            $stmt = $pdo->prepare("DELETE FROM enseignants WHERE id = ?");
-            $stmt->execute([$id]);
-            
-            // Delete from utilisateurs
-            $stmt = $pdo->prepare("DELETE FROM utilisateurs WHERE id = ?");
-            $stmt->execute([$teacher["utilisateur_id"]]);
-            
-            $response["success"] = 1;
-            $response["message"] = "Teacher deleted successfully";
+            try {
+                $pdo->beginTransaction();
+                
+                // 1. D'abord supprimer les absences liées aux séances de cet enseignant
+                $stmt = $pdo->prepare("
+                    DELETE a FROM absences a 
+                    INNER JOIN seances s ON a.seance_id = s.id 
+                    WHERE s.enseignant_id = ?
+                ");
+                $stmt->execute([$id]);
+                
+                // 2. Ensuite supprimer les séances de cet enseignant
+                $stmt = $pdo->prepare("DELETE FROM seances WHERE enseignant_id = ?");
+                $stmt->execute([$id]);
+                
+                // 3. Supprimer l'enseignant
+                $stmt = $pdo->prepare("DELETE FROM enseignants WHERE id = ?");
+                $stmt->execute([$id]);
+                
+                // 4. Supprimer l'utilisateur
+                $stmt = $pdo->prepare("DELETE FROM utilisateurs WHERE id = ?");
+                $stmt->execute([$teacher["utilisateur_id"]]);
+                
+                $pdo->commit();
+                
+                $response["success"] = 1;
+                $response["message"] = "Enseignant supprimé avec succès (séances et absences associées également supprimées)";
+                
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $response["success"] = 0;
+                $response["message"] = "Erreur lors de la suppression: " . $e->getMessage();
+            }
         } else {
             $response["success"] = 0;
-            $response["message"] = "Teacher not found";
+            $response["message"] = "Enseignant non trouvé";
         }
     } else {
         $response["success"] = 0;
-        $response["message"] = "Teacher id required (use ?id=1 in URL)";
+        $response["message"] = "ID enseignant requis (utilisez ?id=1 dans l'URL)";
     }
+    echo json_encode($response);
+}
+// Méthode non supportée
+else {
+    $response["success"] = 0;
+    $response["message"] = "Method not allowed";
     echo json_encode($response);
 }
 ?>

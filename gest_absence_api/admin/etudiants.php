@@ -60,14 +60,32 @@ elseif ($method == "POST") {
 elseif ($method == "PUT") {
     $data = json_decode(file_get_contents("php://input"), true);
     
-    if (isset($data["id"])) {
-        $sql = "UPDATE utilisateurs SET nom = ?, prenom = ?, email = ? 
-                WHERE id = (SELECT utilisateur_id FROM etudiants WHERE id = ?)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$data["nom"], $data["prenom"], $data["email"], $data["id"]]);
-        
-        $response["success"] = 1;
-        $response["message"] = "Student updated successfully";
+    // Récupérer l'ID soit de l'URL soit du body
+    $id = isset($_GET['id']) ? $_GET['id'] : (isset($data['id']) ? $data['id'] : null);
+    
+    if ($id) {
+        // Mettre à jour l'utilisateur
+        if (isset($data["nom"]) && isset($data["prenom"]) && isset($data["email"])) {
+            $sql = "UPDATE utilisateurs u 
+                    JOIN etudiants e ON e.utilisateur_id = u.id 
+                    SET u.nom = ?, u.prenom = ?, u.email = ? 
+                    WHERE e.id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$data["nom"], $data["prenom"], $data["email"], $id]);
+            
+            // Mettre à jour la classe si fournie
+            if (isset($data["classe_id"])) {
+                $sql2 = "UPDATE etudiants SET classe_id = ? WHERE id = ?";
+                $stmt2 = $pdo->prepare($sql2);
+                $stmt2->execute([$data["classe_id"], $id]);
+            }
+            
+            $response["success"] = 1;
+            $response["message"] = "Student updated successfully";
+        } else {
+            $response["success"] = 0;
+            $response["message"] = "Missing fields: nom, prenom, email";
+        }
     } else {
         $response["success"] = 0;
         $response["message"] = "Student id required";
@@ -75,7 +93,6 @@ elseif ($method == "PUT") {
     echo json_encode($response);
 }
 
-// DELETE 
 // DELETE 
 elseif ($method == "DELETE") {
     //get id from query not put a json body it wont work

@@ -59,11 +59,48 @@ class _EtudiantAbsencesScreenState extends State<EtudiantAbsencesScreen> {
     setState(() => _isLoading = false);
   }
 
-  int getTotalAbsences() => _statistics['absent'] ?? 0;
-  int getTotalPresent() => _statistics['present'] ?? 0;
-  int getTotalSeances() => _statistics['total_seances'] ?? 0;
-  double getAttendanceRate() => _statistics['overall_attendance_rate'] ?? 100.0;
-  double getAbsenceRate() => _statistics['overall_absence_rate'] ?? 0.0;
+// ✅ Remplacer les getters existants
+int getTotalAbsences() {
+  final value = _statistics['absent'];
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+int getTotalPresent() {
+  final value = _statistics['present'];
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+int getTotalSeances() {
+  final value = _statistics['total_seances'];
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+double getAttendanceRate() {
+  final value = _statistics['overall_attendance_rate'];
+  if (value == null) return 100.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();  // ✅ Conversion int → double
+  if (value is String) return double.tryParse(value) ?? 100.0;
+  return 100.0;
+}
+
+double getAbsenceRate() {
+  final value = _statistics['overall_absence_rate'];
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();  // ✅ Conversion int → double
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
 
   // Méthode pour exporter en PDF
   void _exportToPdf() {
@@ -251,32 +288,35 @@ class _EtudiantAbsencesScreenState extends State<EtudiantAbsencesScreen> {
     );
   }
 
-  Widget _buildRateCard(String label, double value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10)),
-          Text('${value.toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              backgroundColor: Colors.white.withOpacity(0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 3,
-            ),
+Widget _buildRateCard(String label, double value, Color color) {
+  // ✅ S'assurer que value est un double valide
+  final safeValue = value.clamp(0.0, 100.0);
+  
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.15),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 10)),
+        Text('${safeValue.toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: safeValue / 100.0,  // ✅ Utiliser 100.0 pour garantir un double
+            backgroundColor: Colors.white.withOpacity(0.3),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 3,
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildWarningsSection() {
     final isCritical = _criticalWarnings.isNotEmpty;
@@ -347,12 +387,32 @@ class _EtudiantAbsencesScreenState extends State<EtudiantAbsencesScreen> {
       ],
     );
   }
+  // Dans _EtudiantAbsencesScreenState
+int _parseInt(dynamic value, int defaultValue) {
+  if (value == null) return defaultValue;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? defaultValue;
+  if (value is double) return value.toInt();
+  return defaultValue;
+}
+
+double _parseDouble(dynamic value, double defaultValue) {
+  if (value == null) return defaultValue;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? defaultValue;
+  return defaultValue;
+}
 
   Widget _buildSubjectCard(Map<String, dynamic> subject) {
-    final absenceRate = (subject['absence_rate'] ?? 0.0).toDouble();
-    final attendanceRate = (subject['attendance_rate'] ?? 0.0).toDouble();
-    final isDanger = absenceRate > 20;
-    final isWarning = absenceRate > 10 && absenceRate <= 20;
+    final absenceRate = _parseDouble(subject['absence_rate'], 0.0);
+  final attendanceRate = _parseDouble(subject['attendance_rate'], 0.0);
+  final present = _parseInt(subject['present'], 0);
+  final totalSeances = _parseInt(subject['total_seances'], 0);
+  final absent = _parseInt(subject['absent'], 0);
+  
+  final isDanger = absenceRate > 20;
+  final isWarning = absenceRate > 10 && absenceRate <= 20;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

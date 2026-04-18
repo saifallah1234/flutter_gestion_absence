@@ -1,3 +1,4 @@
+// lib/screens/enseignant/enseignant_home.dart
 import 'package:flutter/material.dart';
 import '../../models/utilisateur.dart';
 import '../../models/seance.dart';
@@ -23,165 +24,208 @@ class _EnseignantHomeScreenState extends State<EnseignantHomeScreen> {
   }
 
   void _loadSeances() {
-    // Appelle l'API pour récupérer uniquement les séances de ce prof
     _seancesFuture = ApiService.getSeancesEnseignant(widget.user.id);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes Séances'),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              // Retour à la page de connexion
-              Navigator.pushReplacementNamed(context, '/');
-            },
-          )
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête de bienvenue
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Color(0xFF1A237E),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+      backgroundColor: const Color(0xFFFBF8FF),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header avec style moderne
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bonjour Prof. ${widget.user.prenom} 👋',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF000666),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Voici vos séances',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, '/');
+                    },
+                    tooltip: 'Déconnexion',
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Bonjour, Prof. ${widget.user.prenom} ${widget.user.nom}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Voici vos prochaines classes.',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-          
-          // Liste des séances
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                setState(() {
-                  _loadSeances();
-                });
-              },
-              child: FutureBuilder<List<Seance>>(
-                future: _seancesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Erreur: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('Aucune séance planifiée.'));
-                  }
 
-                  final seances = snapshot.data!;
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: seances.length,
-                    itemBuilder: (context, index) {
-                      final seance = seances[index];
-                      return Card(
-                        elevation: 2,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+            // Liste des séances
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {
+                    _loadSeances();
+                  });
+                },
+                child: FutureBuilder<List<Seance>>(
+                  future: _seancesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Erreur: ${snapshot.error}'));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.calendar_today, size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              'Aucune séance planifiée',
+                              style: TextStyle(color: Colors.grey, fontSize: 16),
+                            ),
+                          ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    seance.matiereNom ?? 'Matière inconnue',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1A237E),
-                                    ),
-                                  ),
-                                  Chip(
-                                    label: Text(seance.classeNom ?? 'Classe'),
-                                    backgroundColor: const Color(0xFFE8E7F2),
-                                    labelStyle: const TextStyle(
-                                      color: Color(0xFF1A237E),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Text(seance.dateSeance),
-                                  const SizedBox(width: 16),
-                                  const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Text('${seance.heureDebut} - ${seance.heureFin}'),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.checklist),
-                                  label: const Text("Faire l'appel"),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFE8E7F2),
-                                    foregroundColor: const Color(0xFF1A237E),
-                                    elevation: 0,
-                                  ),
-                                  onPressed: () {
-                                    // TODO: Naviguer vers la page d'appel (absences.dart)
-                                    // en lui passant l'ID de la séance et l'ID de la classe
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => AppelScreen(seance: seance),
-                                            ),
-                                          );
-                                  },
-                                ),
+                      );
+                    }
+
+                    final seances = snapshot.data!;
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: seances.length,
+                      itemBuilder: (context, index) {
+                        final seance = seances[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.shade100,
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        seance.matiereNom ?? 'Matière inconnue',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF000666),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE8E7F2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        seance.classeNom ?? 'Classe',
+                                        style: const TextStyle(
+                                          color: Color(0xFF1A237E),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Icon(Icons.calendar_today, 
+                                         size: 14, 
+                                         color: Colors.grey.shade600),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      seance.dateSeance,
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Icon(Icons.access_time, 
+                                         size: 14, 
+                                         color: Colors.grey.shade600),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${seance.heureDebut} - ${seance.heureFin}',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.checklist, size: 18),
+                                    label: const Text("Faire l'appel"),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF000666),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AppelScreen(seance: seance),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
