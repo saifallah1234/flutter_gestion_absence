@@ -1,5 +1,5 @@
 <?php
-include("../config/database.php");
+include("../config/db_connect.php");
 
 // This ID now represents the LOGGED-IN USER (utilisateur_id), not the enseignant_id
 $utilisateur_id = $_GET['id'] ?? 0;

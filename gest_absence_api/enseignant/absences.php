@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-include("../config/database.php");
+include("../config/db_connect.php");
 
 // ==========================================
 // ACTION 1 : RÉCUPÉRER LES ÉTUDIANTS (GET)
