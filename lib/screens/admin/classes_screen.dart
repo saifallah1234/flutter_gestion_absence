@@ -60,48 +60,58 @@ class _ClassesScreenState extends State<ClassesScreen> {
     }
   }
 
-  Future<Map<String, dynamic>?> _showClasseForm({Classe? classe}) async {
-    final nomCtrl = TextEditingController(text: classe?.nom ?? '');
-    final niveauCtrl = TextEditingController(text: classe?.niveau ?? '');
+  Future<Map<String, dynamic>?> _showClasseForm() async {
+    final nomCtrl = TextEditingController();
+    final niveauCtrl = TextEditingController();
 
     return showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(classe == null ? 'Ajouter une classe' : 'Modifier une classe'),
-        content: SizedBox(
-          width: 400,
+        title: const Text('Ajouter une classe'),
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nomCtrl,
-                decoration: const InputDecoration(labelText: 'Nom de la classe', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Nom de la classe',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: niveauCtrl,
-                decoration: const InputDecoration(labelText: 'Niveau (optionnel)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Niveau (optionnel)',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ex: L1, L2, L3, M1, M2',
+                ),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
             onPressed: () {
-              if (nomCtrl.text.isEmpty) {
+              if (nomCtrl.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Veuillez entrer le nom de la classe')),
                 );
                 return;
               }
               final data = {
-                'nom': nomCtrl.text,
-                'niveau': niveauCtrl.text.isNotEmpty ? niveauCtrl.text : null,
+                'nom': nomCtrl.text.trim(),
+                'niveau': niveauCtrl.text.trim().isNotEmpty ? niveauCtrl.text.trim() : null,
               };
               Navigator.pop(context, data);
             },
-            child: Text(classe == null ? 'Ajouter' : 'Modifier'),
+            child: const Text('Ajouter'),
           ),
         ],
       ),
@@ -110,6 +120,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Responsive : nombre de colonnes selon la largeur d'écran
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = screenWidth < 600 ? 1 : (screenWidth < 900 ? 2 : 3);
+    
     return Scaffold(
       backgroundColor: const Color(0xFFFBF8FF),
       appBar: AppBar(
@@ -117,21 +131,23 @@ class _ClassesScreenState extends State<ClassesScreen> {
         elevation: 0,
         title: const Text(
           'Gestion des Classes',
-          style: TextStyle(color: Color(0xFF000666), fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: Color(0xFF000666),
+            fontWeight: FontWeight.w700,
+          ),
         ),
         actions: [
-          Container(
-            width: 300,
-            margin: const EdgeInsets.only(right: 16),
-            child: TextField(
-              onChanged: (value) => setState(() => _searchQuery = value),
-              decoration: InputDecoration(
-                hintText: 'Rechercher...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
+          // ✅ Barre de recherche visible seulement sur écrans larges
+          if (screenWidth > 600)
+            Container(
+              width: 300,
+              margin: const EdgeInsets.only(right: 16),
+              child: _buildSearchField(),
             ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF000666)),
+            onPressed: _loadClasses,
+            tooltip: 'Actualiser',
           ),
           IconButton(
             icon: const Icon(Icons.add, color: Color(0xFF000666)),
@@ -140,63 +156,191 @@ class _ClassesScreenState extends State<ClassesScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _filteredClasses.isEmpty
-              ? const Center(child: Text('Aucune classe trouvée'))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.5,
-                  ),
-                  itemCount: _filteredClasses.length,
-                  itemBuilder: (context, index) {
-                    final classe = _filteredClasses[index];
-                    return Card(
-                      elevation: 2,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color(0xFF000666),
-                              const Color(0xFF1A237E).withOpacity(0.8),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.class_, color: Colors.white, size: 32),
-                              const SizedBox(height: 12),
-                              Text(
-                                classe.nom,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+      body: Column(
+        children: [
+          // ✅ Barre de recherche sur mobile (sous l'AppBar)
+          if (screenWidth <= 600)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: _buildSearchField(),
+            ),
+          
+          // Contenu principal
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredClasses.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _searchQuery.isEmpty ? Icons.class_ : Icons.search_off,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _searchQuery.isEmpty 
+                                  ? 'Aucune classe disponible' 
+                                  : 'Aucune classe ne correspond à "$_searchQuery"',
+                              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_searchQuery.isEmpty) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: _ajouterClasse,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Ajouter une classe'),
                               ),
-                              if (classe.niveau != null && classe.niveau!.isNotEmpty)
-                                Text(
-                                  classe.niveau!,
-                                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                                ),
                             ],
-                          ),
+                          ],
                         ),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          // ✅ Aspect ratio adapté selon le nombre de colonnes
+                          childAspectRatio: crossAxisCount == 1 ? 5.0 : 1.5,
+                        ),
+                        itemCount: _filteredClasses.length,
+                        itemBuilder: (context, index) {
+                          final classe = _filteredClasses[index];
+                          return _buildClasseCard(classe, crossAxisCount);
+                        },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildSearchField() {
+    return TextField(
+      onChanged: (value) => setState(() => _searchQuery = value),
+      decoration: InputDecoration(
+        hintText: 'Rechercher une classe...',
+        prefixIcon: const Icon(Icons.search, size: 20),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: () => setState(() => _searchQuery = ''),
+              )
+            : null,
+      ),
+    );
+  }
+
+Widget _buildClasseCard(Classe classe, int crossAxisCount) {
+  // ✅ Layout horizontal pour mobile (1 colonne)
+  if (crossAxisCount == 1) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF000666), Color(0xFF1A237E)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(Icons.class_, color: Colors.white, size: 32),
+            const SizedBox(width: 16),
+            // ✅ Utiliser Expanded avec un Row/Column flexible
+            Expanded(
+              child: Wrap(  // ✅ Wrap au lieu de Column pour éviter l'overflow
+                direction: Axis.vertical,
+                spacing: 4,
+                children: [
+                  Text(
+                    classe.nom,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (classe.niveau != null && classe.niveau!.isNotEmpty)
+                    Text(
+                      classe.niveau!,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // ✅ Layout grille pour tablette/desktop (2+ colonnes)
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF000666),
+            const Color(0xFF1A237E).withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.class_, color: Colors.white, size: 32),
+          const SizedBox(height: 12),
+          Flexible(
+            child: Text(
+              classe.nom,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (classe.niveau != null && classe.niveau!.isNotEmpty)
+            Flexible(
+              child: Text(
+                classe.niveau!,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
 }

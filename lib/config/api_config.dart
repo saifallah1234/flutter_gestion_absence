@@ -1,5 +1,5 @@
-const String baseUrl = 'http://10.0.2.2/gest_absence_api'; // For emulator
- //const String baseUrl = 'http://localhost/gest_absence_api'; // For Chrome
+//const String baseUrl = 'http://10.0.2.2/gest_absence_api'; // For emulator
+ const String baseUrl = 'http://localhost/gest_absence_api'; // For Chrome
 // const String baseUrl = 'http://192.168.1.100/gest_absence_api'; // For real phone
 
 class ApiEndpoints {
